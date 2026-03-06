@@ -9,7 +9,7 @@
 </div>
 <br>  
   
-<img width="1920" height="478" alt="Logo" src="https://github.com/user-attachments/assets/d63028b6-7090-4fa2-b134-dcb1c44c03d3" />
+<img width="1920" height="478" alt="Logo" src="https://github.com/user-attachments/assets/c4a4aa90-c9d2-4c82-ac77-7487a4392cdb" />
 
 ## Описание
 
@@ -21,7 +21,7 @@
 **Mixomo-OpenWRT** - это автоматическая установка трёх компонентов для умной маршрутизации трафика на роутерах OpenWRT:  
 - [Mihomo](https://github.com/MetaCubeX/mihomo) - мощный и современный прокси-движок.  
 - [hev-socks5-tunnel](https://github.com/heiher/hev-socks5-tunnel) - быстрый tun <-> socks5 мост. Нужен чтобы MagiTrickle увидел интерфейс Mihomo.  
-- [MagiTrickle](https://github.com/MagiTrickle/MagiTrickle) | [MagiTrickle_Mod](https://github.com/LarinIvan/MagiTrickle_Mod) - направляет в прокси только выбранные домены и подсети (IP/CIDR).
+- [MagiTrickle](https://github.com/MagiTrickle/MagiTrickle) | [MagiTrickle_Mod](https://github.com/LarinIvan/MagiTrickle_Mod) - направляет в прокси только выбранные домены и подсети (IP/CIDR).  
 
 **Что это даёт на практике:**
 - Нет падения скорости для всего остального трафика (КиноПоиск, онлайн-игры, обновления Windows и т.д.)  
