@@ -5,6 +5,7 @@ set -euo pipefail
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 log_info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
@@ -17,7 +18,7 @@ step_fail() { echo -e "${RED}[FAIL]${NC}"; exit 1; }
 
 MIHOMO_INSTALL_DIR="/etc/mihomo"
 MIHOMO_BIN="/usr/bin/mihomo"
-SCRIPT_VERSION="v0.1.0-alpha"
+SCRIPT_VERSION="v0.1.1-alpha"
 
 detect_mihomo_arch() {
     local arch=$(uname -m)
@@ -124,15 +125,32 @@ install_mihomo() {
     fi
 
     echo "--> Обновление списков пакетов и установка необходимых зависимостей..."
-    
+
     local PKG_LOG="/tmp/mihomo_install.log"
 
     if ! opkg update > "$PKG_LOG" 2>&1; then
-        log_error "Ошибка при обновлении списков пакетов (opkg update)!"
-        cat "$PKG_LOG"
-        rm -f "$PKG_LOG"
-        step_fail
+        log_warn "Первая попытка opkg update не удалась. Переустановка wget..."
+        
+        if opkg remove wget-ssl > "$PKG_LOG" 2>&1 && \
+           opkg install wget --force-reinstall >> "$PKG_LOG" 2>&1; then
+            
+            log_info "wget переустановлен, повторная попытка opkg update..."
+            
+            if ! opkg update > "$PKG_LOG" 2>&1; then
+                log_error "Ошибка при обновлении списков пакетов после переустановки wget!"
+                cat "$PKG_LOG"
+                rm -f "$PKG_LOG"
+                step_fail
+            fi
+        else
+            log_error "Не удалось переустановить wget. Ошибка обновления пакетов:"
+            cat "$PKG_LOG"
+            rm -f "$PKG_LOG"
+            step_fail
+        fi
     fi
+
+    rm -f "$PKG_LOG"
 
     if ! opkg install kmod-nft-tproxy kmod-tun curl libcurl4 ca-bundle wget-ssl ca-certificates > "$PKG_LOG" 2>&1; then
         log_error "Ошибка при установке пакетов!"
@@ -382,47 +400,41 @@ EOF
     LATEST_ACE_VER=$(curl -s "https://api.cdnjs.com/libraries/ace" | grep -o '"version":"[^"]*"' | cut -d'"' -f4 | head -1)
 
     if [ -z "$LATEST_ACE_VER" ]; then
+        log_warn "cdnjs API недоступен, пробуем GitHub API..."
+        LATEST_ACE_VER=$(curl -s "https://api.github.com/repos/ajaxorg/ace/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4 | sed 's/^v//' | head -1)
+    fi
+
+    if [ -z "$LATEST_ACE_VER" ]; then
         log_warn "Не удалось получить версию через API, используем фиксированную версию"
         LATEST_ACE_VER="1.43.3"
     else
-        echo "--> Последния версия: $LATEST_ACE_VER"
+        echo "--> Актуальная версия: $LATEST_ACE_VER"
     fi
 
-    log_info  "Скачивание ACE Editor $LATEST_ACE_VER..."
+    log_info "Скачивание файлов ACE Editor $LATEST_ACE_VER..."
     
-    local CDN_BASE="https://cdnjs.cloudflare.com/ajax/libs/ace/${LATEST_ACE_VER}"
-    
-    for file in ace.min.js theme-merbivore_soft.min.js theme-tomorrow.min.js mode-yaml.min.js worker-yaml.min.js; do
-        local target_name=$(echo "$file" | sed 's/\.min\.js$/.js/')
-        local dest="${ACE_PATH}/${target_name}"
-        
-        local attempt=1
-        local max_attempts=2
+    for file in ace.js theme-merbivore_soft.js theme-tomorrow.js mode-yaml.js worker-yaml.js; do
+        local dest="${ACE_PATH}/${file}"
         local success=0
+        
+        local URL_CDNJS="https://cdnjs.cloudflare.com/ajax/libs/ace/${LATEST_ACE_VER}/${file}"
+        local URL_JSDELIVR="https://cdn.jsdelivr.net/npm/ace-builds@${LATEST_ACE_VER}/src-min-noconflict/${file}"
+        local URL_GITHUB="https://raw.githubusercontent.com/ajaxorg/ace-builds/master/src-min-noconflict/${file}"
 
-        while [ $attempt -le $max_attempts ]; do
-            if ! curl -Lf -s -o "$dest" "${CDN_BASE}/${file}"; then
-                if ! wget -q -O "$dest" "${CDN_BASE}/${file}"; then
-                    true 
+        for download_url in "$URL_CDNJS" "$URL_JSDELIVR" "$URL_GITHUB"; do
+            if curl -Lf -s -o "$dest" "$download_url" || wget -q -O "$dest" "$download_url"; then
+                if [ -s "$dest" ]; then
+                    success=1
+                    break
                 fi
             fi
-
-            if [ -s "$dest" ]; then
-                success=1
-                break
-            else
-                rm -f "$dest"
-                if [ $attempt -lt $max_attempts ]; then
-                    log_warn "Файл $target_name скачался пустым или возникла ошибка. Повторная попытка..."
-                    sleep 1
-                fi
-            fi
-            
-            attempt=$((attempt + 1))
+            [ -f "$dest" ] && rm -f "$dest"
         done
 
-        if [ $success -eq 0 ]; then
-            log_error "Не удалось скачать $file после $max_attempts попыток."
+        if [ $success -eq 1 ]; then
+            echo "--> Скачан файл $file..."
+        else
+            log_error " Не удалось скачать $file ни из одного источника."
             return 1
         fi
     done
@@ -1267,6 +1279,16 @@ install_magitrickle() {
     
     case "$CHOICE" in
         1)
+            if ! wget --version > /dev/null 2>&1; then
+                log_warn "wget не работает, переустановка..."
+                opkg remove wget-ssl > /dev/null 2>&1
+                opkg install wget --force-reinstall > /dev/null 2>&1 || {
+                    log_error "Критическая ошибка: не удалось переустановить wget"
+                    return 1
+                }
+                log_info "wget успешно переустановлен."
+            fi
+            
             ARCH_SYS=$(grep "OPENWRT_ARCH" /etc/os-release | awk -F '"' '{print $2}')
             [ -n "$ARCH_SYS" ] || { log_error "Не удалось определить архитектуру OpenWrt"; return 1; }
             echo "--> Архитектура: $ARCH_SYS"
@@ -1413,6 +1435,9 @@ finalize_install() {
 }
 
 main() {
+  local CYAN='\033[0;36m'
+  local NC='\033[0m'
+
 	clear
     log_done "Скрипт установки Mixomo OpenWRT $SCRIPT_VERSION от Internet Helper"
 	echo ""
@@ -1430,17 +1455,24 @@ main() {
     finalize_install || step_fail
 	echo ""
 	
-	log_step "Установка Mixomo OpenWRT $SCRIPT_VERSION прошла успешно!"
-	echo ""
-	log_done "1. Выйдите из LuCI (страница роутера) и войдите снова"
-	echo ""
-	log_done "2. Нажмите на Службы или Services -> Mihomo -> Настройте конфигурацию"
-	log_done "Вам может помочь онлайн генератор -> https://spatiumstas.github.io/web4core/"
-	echo ""
-	log_done "3. Нажмите на Службы или Services -> MagiTrickle -> Создайте списки доменов и подсетей"
-	echo ""
-	log_done "4. Наслаждайтесь интернетом :)"
-	echo ""
+    log_step "Установка Mixomo OpenWRT $SCRIPT_VERSION прошла успешно!"
+    echo ""
+    log_done "┌───────────────────────────────────────────────────────────────────────┐"
+    log_done "│ 1. Выйдите из LuCI и войдите снова                                    │"
+    log_done "├───────────────────────────────────────────────────────────────────────┤"
+    log_done "│ 2. Службы или Services → Mihomo → Настройте конфигурацию              │"
+    log_done "│    ${CYAN}[Генератор конфигурации]                                           ${GREEN}│"
+    log_done "│    ${CYAN}https://spatiumstas.github.io/web4core/                            ${GREEN}│"
+    log_done "│    ${CYAN}[Готовые конфигурации]                                             ${GREEN}│"
+    log_done "│    ${CYAN}https://secret-harbor.notion.site/31345fc37b6f80fa82d3da96e9ae12cc ${GREEN}│"
+    log_done "├───────────────────────────────────────────────────────────────────────┤"
+    log_done "│ 3. Службы или Services → MagiTrickle → Создайте списки                │"
+    log_done "│    ${CYAN}[Готовые конфигурации]                                             ${GREEN}│"
+    log_done "│    ${CYAN}https://secret-harbor.notion.site/31345fc37b6f80fa82d3da96e9ae12cc ${GREEN}│"
+    log_done "├───────────────────────────────────────────────────────────────────────┤"
+    log_done "│ 4. Наслаждайтесь интернетом :)                                        │"
+    log_done "└───────────────────────────────────────────────────────────────────────┘"
+    echo ""
 }
 
 main
