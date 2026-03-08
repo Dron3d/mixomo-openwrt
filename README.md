@@ -58,10 +58,15 @@
 - **Если не хватает места для обновления**, сохраните конфигурации Mihomo и MagiTrickle, затем запустите скрипт удаления и после - скрипт установки.
 
 Загрузите необходимые пакеты:
+Если OpenWrt 22.03-24.10.5
 ```
 opkg update && opkg install curl wget-ssl
 ```
-Команда для установки или обновления:
+Если OpenWrt 25+
+```
+apk --update-cache add curl wget-ssl
+```
+Команда для установки и обновления:
 ```
 /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_install.sh || wget -qO- --no-check-certificate https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_install.sh)"
 ```
@@ -73,7 +78,7 @@ wget -qO /tmp/mixomo_openwrt_install.sh --no-check-certificate https://raw.githu
 # Удаление
 Пакеты `curl` и `wget-ssl` удалены не будут.  
 
-Команда для удаления:
+Команда для полного удаления:
 ```
 /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_delete.sh || wget -qO- --no-check-certificate https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_delete.sh)"
 ```
