@@ -36,7 +36,7 @@
 <img width="993" height="527" alt="image" src="https://github.com/user-attachments/assets/1ae832a5-9bdd-45e8-b229-61fbae029203" />
 
 # Требования
-- От OpenWRT 22.03 и до OpenWRT 24+ включительно
+- От OpenWRT 22.03 и до OpenWRT 25+ включительно
 - 16 МБ во Временном хранилище для загрузки архива
 - 18 МБ в Дисковом пространстве для всех необходимых пакетов
 
