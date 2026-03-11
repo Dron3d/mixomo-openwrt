@@ -1,10 +1,14 @@
 #!/bin/sh
 
-SCRIPT_VERSION="v0.1.2-alpha"
+SCRIPT_VERSION="v0.1.3-alpha"
 
-MT_VERSION_APK="0.5.3"
-MT_PRE_APK="pre20260305232358"
-MT_VERSION_OPKG="0.5.2"
+MT_JOB_ID="13378493545"
+
+MT_APK_VERSION="0.5.3"
+MT_APK_PRE="pre20260305232358"
+
+MT_IPK_VERSION="0.5.2"
+MT_IPK_GIT_HASH="git20260305232358.d47bd8b3-1"
 
 MIHOMO_INSTALL_DIR="/etc/mihomo"
 MIHOMO_BIN="/usr/bin/mihomo"
@@ -82,7 +86,7 @@ install_deps() {
     local PKG_LOG="/tmp/install_deps.log"
 
     if [ "$USE_APK" -eq 1 ]; then
-        log_info "Обновление индексов пакетов (apk)..."
+        log_info "Обновление индексов пакетов..."
         apk update > "$PKG_LOG" 2>&1 || true
         local AVAIL_PKG
         AVAIL_PKG=$(grep -o '[0-9]* distinct packages available' "$PKG_LOG" | grep -o '^[0-9]*')
@@ -98,7 +102,6 @@ install_deps() {
                 return 1
             fi
         fi
-        log_info "Доступно пакетов: $AVAIL_PKG"
         apk add wget-ssl ca-certificates kmod-tun kmod-nft-tproxy kmod-nft-nat curl >> "$PKG_LOG" 2>&1 || {
             log_error "Ошибка установки зависимостей:"; cat "$PKG_LOG"; rm -f "$PKG_LOG"; return 1;
         }
@@ -199,8 +202,8 @@ install_mihomo() {
     local TMP_FILE="/tmp/mihomo.gz"
 
     log_info "Скачивание архива $FILENAME"
-    echo "--> URL: $DOWNLOAD_URL"
-    if ! curl -Lf --retry 3 --retry-delay 2 "$DOWNLOAD_URL" -o "$TMP_FILE"; then
+    log_info "$DOWNLOAD_URL"
+    if ! curl -Lf --retry 3 --retry-delay 2 "$DOWNLOAD_URL" -o "$TMP_FILE" >/dev/null 2>&1; then
         log_error "Ошибка скачивания! Проверьте, существует ли файл $FILENAME в релизах."
         return 1
     fi
@@ -1206,9 +1209,9 @@ install_hev_tunnel() {
 
     if [ "$USE_APK" -eq 1 ]; then
         apk cache clean
-        apk add hev-socks5-tunnel
+        apk add hev-socks5-tunnel >/dev/null 2>&1
     else
-        manage_pkg install hev-socks5-tunnel
+        manage_pkg install hev-socks5-tunnel >/dev/null 2>&1
     fi
 
     rm -f /etc/hev-socks5-tunnel/main.yml
@@ -1283,35 +1286,25 @@ EOF
 }
 
 _magitrickle_apk() {
-    local OPENWRT_ARCH
-    OPENWRT_ARCH=$(grep "^OPENWRT_ARCH=" /etc/os-release | cut -d'"' -f2)
-    [ -n "$OPENWRT_ARCH" ] || { log_error "Не удалось определить архитектуру из /etc/os-release"; return 1; }
-    echo "--> Архитектура OpenWrt: $OPENWRT_ARCH"
+    local ARCH
+    ARCH=$(grep "^OPENWRT_ARCH=" /etc/os-release | cut -d'"' -f2)
+    [ -n "$ARCH" ] || { log_error "Не удалось определить архитектуру"; return 1; }
+    
+    local PKG_NAME="magitrickle_${MT_APK_VERSION}_${MT_APK_PRE}-r1_openwrt_${ARCH}.apk"
+    local DOWNLOAD_URL="https://gitlab.com/magitrickle/magitrickle/-/jobs/${MT_JOB_ID}/artifacts/raw/.build/${PKG_NAME}?inline=false"
+    local TMP_FILE="/tmp/${PKG_NAME}"
 
-    local APK_NAME="magitrickle_${MT_VERSION_APK}_${MT_PRE_APK}-r1_openwrt_${OPENWRT_ARCH}.apk"
-    local APK_URL="https://gitlab.com/api/v4/projects/69165954/jobs/artifacts/develop/raw/.build/${APK_NAME}?job=build"
-    local TMP_APK="/tmp/magitrickle.apk"
-
-    echo "--> Скачивание: $APK_NAME"
-    if ! curl -Lf --retry 3 --retry-delay 2 -o "$TMP_APK" "$APK_URL"; then
-        log_error "Ошибка скачивания пакета"
-        log_error "URL: $APK_URL"
-        rm -f "$TMP_APK"
+    echo "--> Скачивание APK: $PKG_NAME"
+    if ! curl -Lf --retry 3 --retry-delay 2 -o "$TMP_FILE" "$DOWNLOAD_URL" >/dev/null 2>&1; then
+        log_error "Ошибка скачивания: $DOWNLOAD_URL"
         return 1
     fi
 
-    if [ ! -s "$TMP_APK" ]; then
-        log_error "Скачанный файл пустой. Проверьте MT_VERSION_APK и MT_PRE_APK в начале скрипта."
-        rm -f "$TMP_APK"
-        return 1
-    fi
-
-    echo "--> Установка пакета..."
-    apk add --allow-untrusted "$TMP_APK" || { log_error "Ошибка установки MagiTrickle"; rm -f "$TMP_APK"; return 1; }
-    rm -f "$TMP_APK"
-
-    /etc/init.d/magitrickle enable 2>/dev/null || true
-    /etc/init.d/magitrickle start 2>/dev/null || true
+    echo "--> Установка APK..."
+    apk add --allow-untrusted "$TMP_FILE" >/dev/null 2>&1 || { log_error "Ошибка установки"; rm -f "$TMP_FILE"; return 1; }
+    
+    rm -f "$TMP_FILE"
+    /etc/init.d/magitrickle enable 2>/dev/null && /etc/init.d/magitrickle start 2>/dev/null
 }
 
 _magitrickle_opkg() {
@@ -1409,10 +1402,10 @@ install_magitrickle() {
     [ -f "$CONFIG_PATH" ] && cp "$CONFIG_PATH" "$BACKUP_PATH"
 
     if [ "$USE_APK" -eq 1 ]; then
-        apk del magitrickle 2>/dev/null || true
+        apk del magitrickle >/dev/null 2>&1 || true
     else
-        opkg remove magitrickle_mod 2>/dev/null || true
-        opkg remove magitrickle 2>/dev/null || true
+        opkg remove magitrickle_mod >/dev/null 2>&1 || true
+        opkg remove magitrickle >/dev/null 2>&1 || true
     fi
 
     if [ "$USE_APK" -eq 1 ]; then
@@ -1474,7 +1467,7 @@ finalize_install() {
 
 main() {
     clear
-    log_done "Скрипт установки Mixomo OpenWRT $SCRIPT_VERSION от Internet Helper"
+    log_done "=== Mixomo OpenWrt $SCRIPT_VERSION от Internet Helper ==="
     echo ""
 
     log_step "[1/5] Установка зависимостей"
@@ -1497,7 +1490,7 @@ main() {
     finalize_install || step_fail
     echo ""
 
-    log_step "Установка Mixomo OpenWRT $SCRIPT_VERSION прошла успешно!"
+    log_step "Установка Mixomo OpenWrt $SCRIPT_VERSION прошла успешно!"
     echo ""
     log_done "┌───────────────────────────────────────────────────────────────────────┐"
     log_done "│ 1. Выйдите из LuCI и войдите снова                                    │"
