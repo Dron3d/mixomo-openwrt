@@ -38,50 +38,51 @@
 # Требования
 - От OpenWRT 22.03 и до OpenWRT 25+ включительно
 - 16 МБ во Временном хранилище для загрузки архива
-- 18 МБ в Дисковом пространстве для всех необходимых пакетов
+- 18 МБ в Дисковом пространстве для всех необходимых пакетов  
 
-При нехватке места и обнаружении Mihomo будет предложено его удалить и установить заново.  
-Конфигурация сохраниться только если там есть строка *mixed-port: 7890*  
+# Установка или обновление  
+Важные пояснения:
+- Если у вас форк OpenWRT (Routerich и т.п.), лучше выбрать **оригинальный** MagiTrickle после начала установки.  
+- Повторный запуск обновит Mihomo, hev-socks5-tunnel и мод MagiTrickle (оригинал пока зафиксирован).  
+- Ваши настройки Mihomo и списки сайтов MagiTrickle останутся нетронутыми.  
+- Если появится новая техническая версия конфигурации MagiTrickle, предыдущая будет сохранена рядом в виде бэкапа.
+- При нехватке места и обнаружении Mihomo будет предложено его удалить и установить заново. Конфигурация сохраниться только если там есть строка *mixed-port: 7890*  
+- **Если всё-таки не хватает места для обновления**, сохраните конфигурации Mihomo и MagiTrickle, запустите скрипт удаления и только потом - скрипт установки.
 
-# Что делать после установки  
+Загрузите необходимые пакеты перед установкой (только один раз, при обновлении не требуется).  
+
+OpenWrt 22.03-24.10.5:
+```
+opkg update && opkg install curl wget-ssl
+```
+OpenWrt 25+:
+```
+apk --update-cache add curl wget-ssl
+```
+#### Команда для установки или обновления:
+```
+/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_install.sh || wget -qO- --no-check-certificate https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_install.sh)"
+```
+#### Альтернативная команда (если не сработала выше):
+```
+wget -qO /tmp/mixomo_openwrt_install.sh --no-check-certificate https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_install.sh && chmod +x /tmp/mixomo_openwrt_install.sh && /tmp/mixomo_openwrt_install.sh && rm /tmp/mixomo_openwrt_install.sh
+```
+
+#### Что делать после установки  
 - Зайти в LuCI -> Службы или Services -> Mihomo -> Вставить свою конфигурацию.<br>
   Чтобы её составить можно использовать [оригинальную документацию](https://mihomo-docs.netlify.app/ru/config/) или [онлайн генератор web4core](https://spatiumstas.github.io/web4core).  
   Конфигурация **обязана** содержать строку *mixed-port: 7890* для работы через *hev-socks5-tunnel*.
 - Зайти в LuCI -> Службы или Services -> MagiTrickle -> Создать списки доменов или подсетей.<br>  
 - (*Опционально*) Изменить DNS-серверы на публичные -> [ссылка на инструкцию](https://forum.routerich.ru/t/kak-izmenit-dns/71).
 
-# Установка и обновление
-- Если у вас форк OpenWRT (Routerich и т.п.), лучше выбрать **оригинальный** MagiTrickle после начала установки.  
-- Повторный запуск обновит Mihomo, hev-socks5-tunnel и мод MagiTrickle (оригинал пока зафиксирован).  
-- Ваши настройки Mihomo и списки сайтов MagiTrickle останутся нетронутыми.  
-- Если появится новая техническая версия конфигурации MagiTrickle, предыдущая будет сохранена рядом в виде бэкапа. 
-- **Если не хватает места для обновления**, сохраните конфигурации Mihomo и MagiTrickle, затем запустите скрипт удаления и после - скрипт установки.
-
-Загрузите необходимые пакеты. Если OpenWrt 22.03-24.10.5:
-```
-opkg update && opkg install curl wget-ssl
-```
-Если OpenWrt 25+:
-```
-apk --update-cache add curl wget-ssl
-```
-Команда для установки и обновления:
-```
-/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_install.sh || wget -qO- --no-check-certificate https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_install.sh)"
-```
-Альтернативная команда (если не сработала выше):
-```
-wget -qO /tmp/mixomo_openwrt_install.sh --no-check-certificate https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_install.sh && chmod +x /tmp/mixomo_openwrt_install.sh && /tmp/mixomo_openwrt_install.sh && rm /tmp/mixomo_openwrt_install.sh
-```
-
-# Удаление
+# Удаление  
 Пакеты `curl` и `wget-ssl` удалены не будут.  
 
-Команда для полного удаления:
+#### Команда для полного удаления:
 ```
 /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_delete.sh || wget -qO- --no-check-certificate https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_delete.sh)"
 ```
-Альтернативная команда (если не сработала выше):
+#### Альтернативная команда (если не сработала выше):
 ```
 wget -qO /tmp/mixomo_openwrt_delete.sh --no-check-certificate https://raw.githubusercontent.com/Internet-Helper/mixomo-openwrt/refs/heads/main/mixomo_openwrt_delete.sh && chmod +x /tmp/mixomo_openwrt_delete.sh && /tmp/mixomo_openwrt_delete.sh && rm /tmp/mixomo_openwrt_delete.sh
 ```
