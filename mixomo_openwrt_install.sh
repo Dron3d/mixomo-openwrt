@@ -1293,12 +1293,12 @@ _magitrickle_apk() {
     local URL="https://gitlab.com/magitrickle/magitrickle/-/jobs/${MT_JOB_ID}/artifacts/raw/.build/${PKG_NAME}?inline=false"
     local TMP="/tmp/${PKG_NAME}"
 
-    echo "--> Скачивание APK: $PKG_NAME"
+    echo "--> Скачивание $PKG_NAME"
     curl -Lf --retry 3 --retry-delay 2 -o "$TMP" "$URL" || { log_error "Ошибка скачивания"; return 1; }
 
-    echo "--> Установка $PKG_NAME..."
+    echo "--> Установка $PKG_NAME"
     if apk add --allow-untrusted "$TMP" >/dev/null 2>&1; then
-        echo "--> Установка $PKG_NAME завершена..."
+        echo "--> $PKG_NAME установлен..."
     else
         log_error "Ошибка установки $PKG_NAME"
         rm -f "$TMP"
@@ -1321,23 +1321,21 @@ _magitrickle_opkg() {
             local ARCH
             ARCH=$(grep "^OPENWRT_ARCH=" /etc/os-release | cut -d'"' -f2)
             [ -n "$ARCH" ] || { log_error "Не удалось определить архитектуру"; return 1; }
-            echo "--> Архитектура OpenWrt: $ARCH"
-
             local PKG_NAME="magitrickle_${MT_IPK_VERSION}~${MT_IPK_PART}_openwrt_${ARCH}.ipk"
             local URL="https://gitlab.com/magitrickle/magitrickle/-/jobs/${MT_JOB_ID}/artifacts/raw/.build/${PKG_NAME}?inline=false"
             local TMP="/tmp/${PKG_NAME}"
 
-            echo "--> Скачивание оригинала: $PKG_NAME"
+            echo "--> Скачивание $PKG_NAME"
             if ! curl -Lf --retry 3 --retry-delay 2 -o "$TMP" "$URL"; then
                 log_error "Ошибка скачивания: $URL"
                 return 1
             fi
 
-            echo "--> Установка оригинала..."
+            echo "--> Установка $PKG_NAME"
             if opkg install "$TMP" >/dev/null 2>&1; then
-                echo "--> Установка $PKG_NAME завершена..."
+                echo "--> $PKG_NAME установлен..."
             else
-                log_error "Ошибка установки оригинала"
+                log_error "Ошибка установки $PKG_NAME"
                 rm -f "$TMP"
                 return 1
             fi
@@ -1345,12 +1343,12 @@ _magitrickle_opkg() {
             /etc/init.d/magitrickle enable 2>/dev/null && /etc/init.d/magitrickle start 2>/dev/null
             ;;
         2)
-            log_info "Запуск установки MagiTrickle_Mod..."
+            log_info "Установка MagiTrickle_Mod..."
             curl -sSL https://raw.githubusercontent.com/LarinIvan/MagiTrickle_Mod/develop/add_repo.sh | sh >/dev/null 2>&1 || {
                 log_error "Ошибка установки MagiTrickle_Mod"
                 return 1
             }
-            echo "--> Установка MagiTrickle_Mod завершена..." ;;
+            echo "--> MagiTrickle_Mod установлен..." ;;
         *)
             log_error "Неверный выбор"
             return 1
