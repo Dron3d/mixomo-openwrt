@@ -86,7 +86,6 @@ install_deps() {
     local PKG_LOG="/tmp/install_deps.log"
 
     if [ "$USE_APK" -eq 1 ]; then
-        log_info "Обновление индексов пакетов..."
         apk update > "$PKG_LOG" 2>&1 || true
         local AVAIL_PKG
         AVAIL_PKG=$(grep -o '[0-9]* distinct packages available' "$PKG_LOG" | grep -o '^[0-9]*')
@@ -126,7 +125,7 @@ install_deps() {
     fi
 
     rm -f "$PKG_LOG"
-    log_info "Зависимости установлены."
+    log_info "Зависимости установлены..."
 }
 
 install_mihomo() {
@@ -1425,13 +1424,30 @@ install_magitrickle() {
     cat > /www/luci-static/resources/view/magitrickle/magitrickle.js <<'EOF'
 'use strict';
 'require view';
+
 return view.extend({
-    handleSaveApply: null,
     handleSave: null,
+    handleSaveApply: null,
     handleReset: null,
+
     render: function() {
-        var ip = window.location.hostname;
-        var url = 'http://' + ip + ':8080';
+        var hostname = window.location.hostname;
+        var port = '8080';
+        var url = 'http://' + hostname + ':' + port;
+
+        if (window.location.protocol === 'https:') {
+            return E('div', { style: 'padding: 20px; text-align: center;' }, [
+                E('p', _('HTTPS соединение блокирует встроенный интерфейс MagiTrickle через LuCI.')),
+                E('p', { style: 'margin-bottom: 20px;' }, _('Пожалуйста, откройте MagiTrickle в новой вкладке для полноценного управления.')),
+                E('a', {
+                    'class': 'btn cbi-button-action',
+                    'href': url,
+                    'target': '_blank',
+                    'style': 'padding: 10px 20px; font-size: 1.1em;'
+                }, _('Открыть MagiTrickle'))
+            ]);
+        }
+
         return E('div', {
             style: 'width:100%; height:92vh; margin: -20px -20px 0 -20px; overflow: hidden;'
         }, E('iframe', {
@@ -1454,6 +1470,8 @@ EOF
     }
 }
 EOF
+
+    rm -rf /tmp/luci-indexcache /tmp/luci-modulecache/
 }
 
 finalize_install() {
@@ -1486,12 +1504,9 @@ main() {
     echo ""
 
     log_step "[4/5] Установка MagiTrickle"
-    if [ "$USE_APK" -eq 1 ]; then
-        _magitrickle_apk || step_fail
-    else
-        install_magitrickle
-    fi
-
+    install_magitrickle || step_fail
+    echo ""
+    
     log_step "[5/5] Завершение"
     finalize_install || step_fail
     echo ""
