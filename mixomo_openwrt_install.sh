@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SCRIPT_VERSION="v0.1.3-alpha"
+SCRIPT_VERSION="v0.1.4-alpha"
 
 MT_JOB_ID="13378493545"
 
