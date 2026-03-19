@@ -36,7 +36,7 @@
 <img width="993" height="527" alt="image" src="https://github.com/user-attachments/assets/1ae832a5-9bdd-45e8-b229-61fbae029203" />
 
 # Требования
-- OpenWRT 24.10+ и 25.0+ включительно
+- OpenWRT 24.10+ и 25.12+ включительно
 - Около 16 МБ во Временном хранилище для загрузки архива
 - Минимум 18 МБ в Дисковом пространстве для всех необходимых пакетов  
 
@@ -55,7 +55,7 @@ OpenWrt 24.10+:
 ```
 opkg update && opkg install curl wget-ssl
 ```
-OpenWrt 25.0+:
+OpenWrt 25.12+:
 ```
 apk --update-cache add curl wget-ssl
 ```
